@@ -11,6 +11,7 @@
 #include <functional>
 #include <thread>
 #include <string.h>
+#include <ctime>
 #include <chrono>
 #include "tclap/CmdLine.h"
 
@@ -18,10 +19,16 @@ using namespace TCLAP;
 
 int main(int argc, char * argv[]) try
 {
+    // Get datetime formatted
+    std::time_t tm = std::time(nullptr);
+    std::tm ltm = *std::localtime(&tm);
+    std::stringstream bag_filename;
+    bag_filename << "roshi_" << std::put_time(&ltm, "%Y%m%d_%H%M%S") << ".bag";
+
     // Parse command line arguments
-    CmdLine cmd("librealsense rs-record example tool", ' ');
-    ValueArg<int>    time("t", "Time", "Amount of time to record (in seconds)", false, 10, "");
-    ValueArg<std::string> out_file("f", "FullFilePath", "the file where the data will be saved to", false, "test.bag", "");
+    CmdLine cmd("Roshi Realsense Data Collector", ' ');
+    ValueArg<int> time("t", "Time", "Amount of time to record (in seconds)", false, 60, "");
+    ValueArg<std::string> out_file("f", "FullFilePath", "the file where the data will be saved to", false, bag_filename.str(), "");
 
     cmd.add(time);
     cmd.add(out_file);
@@ -29,6 +36,11 @@ int main(int argc, char * argv[]) try
 
     rs2::pipeline pipe;
     rs2::config cfg;
+    cfg.enable_stream(RS2_STREAM_COLOR, 960/*1280*/, 540/*720*/, RS2_FORMAT_RGB8, 30);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
+    cfg.enable_stream(RS2_STREAM_ACCEL);
+    cfg.enable_stream(RS2_STREAM_GYRO);
+    cfg.enable_stream(RS2_STREAM_CONFIDENCE);
     cfg.enable_record_to_file(out_file.getValue());
 
     std::mutex m;
